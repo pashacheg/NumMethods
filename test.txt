@@ -1,0 +1,24 @@
+sudo bash - enter into root mode
+
+gcc -o name1 name2.c - compile program (name1 - bin file, name2 - code)
+
+gcc -c name1.c
+gcc -c name2.c
+gcc -o newname name1.o name2.o - merged object files 
+
+---compile with library---
+==static lib==
+
+gcc -c main.c
+gcc -c name1.c
+gcc -c name2.c
+ar cr libArchiveName.a name1.o name2.o
+gcc -o Name main.o -L. -lArchiveName
+
+==dynamic lib==
+
+gcc -c main.c
+gcc -c -fpic name1.c
+gcc -c -fpic name2.c
+gcc -shared -o libName.so name1.o name2.o
+gcc -o main main.o -L. -lName -Wl,-rpath,.
