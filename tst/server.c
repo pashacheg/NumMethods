@@ -12,7 +12,7 @@
 
 unsigned int mkip()
 {
-	unsigned int arr[] = {10, 0, 2, 255},
+	unsigned int arr[] = {192, 168, 1, 64},
 		ip = 0;
 	
 	for (int i = 0; i < 4; ++i)
@@ -72,10 +72,22 @@ int main()
 		{
 			br = recv(sock, buf, SZ, 0);
 			if (br <= 0) break;
-			printf("%s\n", buf);
-			send(sock, buf, br, 0);
+			printf("client: %s\n", buf);
+			
+			printf("you: ");
+			scanf("%s", buf);
+			
+			int cnt;
+			for (cnt = 0; buf[cnt]; ++cnt);
+			
+			char* msg = malloc(cnt);
+			memcpy(msg, buf, cnt);
+			
+			send(sock, msg, cnt, 0);
+			
+			free(msg);
 		}
-		
+	
 		close(sock);
 	}
 }
