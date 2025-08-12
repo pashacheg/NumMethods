@@ -52,8 +52,6 @@ int main()
 		return -1;
 	}
 	
-	char bufi[SZ], bufo[SZ];
-	int br;
 
 	while(1)
 	{
@@ -72,7 +70,8 @@ int main()
 		{
 			while(1)
 			{
-				br = recv(sock, bufi, SZ, 0);
+				char bufi[SZ] = "";
+				int br = recv(sock, bufi, SZ, 0);
 				if (br <= 0) break;
 				printf("client: %s\n", bufi);
 								
@@ -83,7 +82,7 @@ int main()
 		{
 			while(1)
 			{
-				printf("you: ");
+				char bufo[SZ] = "";
 				scanf("%s", bufo);
 				
 				int cnt;
@@ -92,18 +91,11 @@ int main()
 				char* msg = malloc(cnt);
 				memcpy(msg, bufo, cnt);
 				
-				if (send(sock, msg, cnt, 0) == -1) break;
+				if (send(sock, msg, cnt, 0) == -1) return -1;
 				
 				free(msg);
 				
 			}
-		}
-		
-		/*
-		while(1)
-		{
-			
-		}*/
-	
+		}	
 	}
 }
