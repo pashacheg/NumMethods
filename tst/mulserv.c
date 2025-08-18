@@ -45,6 +45,7 @@ int getVal(const List* ls, const char* key)
 	return ptr ? ptr->val : -1;
 }
 
+
 void* getMessThr(void* data)
 {
 	List* user = (List*)data;
@@ -153,26 +154,46 @@ int main()
 	pthread_create(&thr, NULL, getConnThr, &data);
 	
 	int sock = -1;
+	char tab[32] = "#";
 	
 	while(1)
 	{
+		printf("%s: ", tab);
 		char bufo[SZ] = "";
 		scanf("%s", bufo);
 		
 		int cnt;
 		for (cnt = 0; bufo[cnt]; ++cnt);
+		cnt++;
 		
 		char* cmnd = malloc(cnt);
 		memcpy(cmnd, bufo, cnt);
 		
 		
-		if (!strcmp(cmnd, "all") && sock == -1)
+		if (!strcmp(cmnd, "!all"))
 		{
-			// code...
+			printf("to all: ");
+			
+			char bf[SZ] = "";
+			scanf("%s", bf);
+		
+			int i;
+			for (i = 0; bf[i]; ++i);
+			i++;
+		
+			char* msg = malloc(i);
+			memcpy(msg, bf, i);
+			
+			for (List* ptr = ls.next; ptr; ptr = ptr->next)
+			{
+				send(ptr->val, msg, i, 0);
+			}
 		}
-		else if (!strcmp(cmnd, "!") && sock != -1)
+		else if (!strcmp(cmnd, "!exit"))
 		{
 			sock = -1;
+			tab[0] = '#';
+			for (int i = 1; i < 32; ++i) tab[i] = '\0';
 		}
 		else
 		{
@@ -180,6 +201,13 @@ int main()
 			if (sock == -1) 
 			{
 				if ((sock = getVal(&ls, cmnd)) == -1) puts("user doesn't exist");
+				else
+				{
+					memcpy(tab + 3, cmnd, cnt);
+					tab[0] = 't';
+					tab[1] = 'o';
+					tab[2] = ' ';
+				}
 			}
 			else
 			{
