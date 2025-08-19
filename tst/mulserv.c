@@ -26,7 +26,7 @@ unsigned int mkip()
 }
 
 
-typedef struct { char key[32]; int val; void* next; } List;
+typedef struct { char key[32]; int val; void* next; void* prev; } List;
 typedef struct { int lstn; List* list; } Exch;
 
 void addList (List* ls, List* el)
@@ -35,6 +35,34 @@ void addList (List* ls, List* el)
 	for (ptr = ls; ptr->next; ptr = ptr->next);
 	
 	ptr->next = el;
+	el->prev = ptr;
+}
+
+void remNode(List* ls)
+{
+	if (!ls) return;
+	else if (!ls->next && ls->prev)
+	{
+		List* ptr = (List*)ls->prev;
+		ptr->next = NULL;
+	}
+	else if (ls->next && !ls->prev)
+	{
+		List* ptr = (List*)ls->next;
+		ptr->prev = NULL;
+		return;
+	}
+	else if (!ls->next && !ls->prev) return;
+	else
+	{
+		List* ptr = (List*)ls->prev;
+		ptr->next = ls->next;
+		
+		ptr = (List*)ls->next;
+		ptr->prev = ls->prev;
+	}
+	
+	free(ls);
 }
 
 int getVal(const List* ls, const char* key)
@@ -45,22 +73,73 @@ int getVal(const List* ls, const char* key)
 	return ptr ? ptr->val : -1;
 }
 
+List* getList(List* ls, const char* str)
+{
+	for (ls; ls && strcmp(ls->key, str); ls = ls->next);
+	
+	return ls;
+}
+
+void printList(const List* ls)
+{
+	for (const List* ptr = ls; ptr; ptr = ptr->next)
+	{
+		if (!ptr->key[0]) continue;
+		
+		printf("%s\n", ptr->key);
+	}
+}
+
+void discSock(List* ls)
+{
+	close(ls->val);
+	remNode(ls);
+}
+
 
 void* getMessThr(void* data)
 {
 	List* user = (List*)data;
 	int sock = user->val;
+	char echo = 0;
 	
 	while(1)
 	{
 		char bufi[SZ] = "";
 		int br = recv(sock, bufi, SZ, 0);
+		
 		if (br <= 0)
 		{
 			close(sock);
 			free(user);
 			return NULL;
 		}
+		
+		if (!strcmp(bufi, "!diconnect"))
+		{
+			char* name = malloc(32);
+			memcpy(name, user->key, 32);
+			
+			discSock(user);
+			
+			printf("user <%s> has disconnected\n", name);
+			free(name);
+			
+			return NULL;
+		}
+		
+		if (echo)
+		{
+			char* msg = malloc(br);
+			memcpy(msg, bufi, br);
+			
+			send(sock, msg, br, 0);
+			
+			free(msg);
+		}
+		
+		echo = strcmp(bufi, "!echo") ? echo : !echo;
+		
 		printf("%s: %s\n", user->key, bufi);			
 	}
 	
@@ -102,6 +181,7 @@ void* getConnThr(void* data)
 			memcpy(new_user->key, bufi, br);
 			new_user->val = sock;
 			new_user->next = NULL;
+			new_user->prev = NULL;
 			
 			addList(ls, new_user);
 			
@@ -112,6 +192,7 @@ void* getConnThr(void* data)
 	
 	return NULL;
 }
+
 
 
 int main()
@@ -145,6 +226,7 @@ int main()
 	List ls;
 	ls.val = 0;
 	ls.next = NULL;
+	ls.prev = NULL;
 	
 	Exch data;
 	data.lstn = listener;
@@ -158,7 +240,7 @@ int main()
 	
 	while(1)
 	{
-		printf("%s: ", tab);
+		printf("%s:\n", tab);
 		char bufo[SZ] = "";
 		scanf("%s", bufo);
 		
@@ -172,7 +254,7 @@ int main()
 		
 		if (!strcmp(cmnd, "!all"))
 		{
-			printf("to all: ");
+			printf("to all:\n");
 			
 			char bf[SZ] = "";
 			scanf("%s", bf);
@@ -195,10 +277,32 @@ int main()
 			tab[0] = '#';
 			for (int i = 1; i < 32; ++i) tab[i] = '\0';
 		}
+		else if (!strcmp(cmnd, "!get.users"))
+		{
+			puts("connected users:");
+			printList(&ls);
+		}
 		else
 		{
+			if (cmnd[0] == '!')
+			{
+				char* name = malloc(cnt - 1);
+				memcpy(name, cmnd + 1, cnt - 1);
+				List* user = getList(&ls, name);
+				
+				if (!user) printf("user <%s> does't exist to remove\n", name);
+				
+				if (user->val == sock)
+				{
+					sock = -1;
+					tab[0] = '#';
+					for (int i = 1; i < 32; ++i) tab[i] = '\0';
+				}
+				
+				discSock(user);
+			}
 			
-			if (sock == -1) 
+			else if (sock == -1) 
 			{
 				if ((sock = getVal(&ls, cmnd)) == -1) puts("user doesn't exist");
 				else
