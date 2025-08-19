@@ -115,7 +115,7 @@ void* getMessThr(void* data)
 			return NULL;
 		}
 		
-		if (!strcmp(bufi, "!diconnect"))
+		if (!strcmp(bufi, "!disconnect"))
 		{
 			char* name = malloc(32);
 			memcpy(name, user->key, 32);
@@ -138,9 +138,11 @@ void* getMessThr(void* data)
 			free(msg);
 		}
 		
-		echo = strcmp(bufi, "!echo") ? echo : !echo;
-		
-		printf("%s: %s\n", user->key, bufi);			
+		if (!strcmp(bufi, "!echo"))
+		{
+			echo = !echo;
+		}
+		else printf("%s: %s\n", user->key, bufi);			
 	}
 	
 	close(sock);
@@ -253,23 +255,11 @@ int main()
 		
 		
 		if (!strcmp(cmnd, "!all"))
-		{
-			printf("to all:\n");
+		{			
+			sock = -2;
 			
-			char bf[SZ] = "";
-			scanf("%s", bf);
-		
-			int i;
-			for (i = 0; bf[i]; ++i);
-			i++;
-		
-			char* msg = malloc(i);
-			memcpy(msg, bf, i);
-			
-			for (List* ptr = ls.next; ptr; ptr = ptr->next)
-			{
-				send(ptr->val, msg, i, 0);
-			}
+			memcpy(tab + 6, "to all", 6);
+			for (int i = 6; i < 32; ++i) tab[i] = '\0';
 		}
 		else if (!strcmp(cmnd, "!exit"))
 		{
@@ -290,7 +280,11 @@ int main()
 				memcpy(name, cmnd + 1, cnt - 1);
 				List* user = getList(&ls, name);
 				
-				if (!user) printf("user <%s> does't exist to remove\n", name);
+				if (!user)
+				{
+					printf("user <%s> doesn't exist to remove\n", name);
+					continue;
+				}
 				
 				if (user->val == sock)
 				{
@@ -311,6 +305,13 @@ int main()
 					tab[0] = 't';
 					tab[1] = 'o';
 					tab[2] = ' ';
+				}
+			}
+			else if (sock == -2)
+			{
+				for (List* ptr = ls.next; ptr; ptr = ptr->next)
+				{
+					send(ptr->val, cmnd, cnt, 0);
 				}
 			}
 			else
